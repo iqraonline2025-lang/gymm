@@ -1,22 +1,21 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation'; // 1. Added useSearchParams
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LoginPage() {
+// 1. Move all the login logic into a sub-component
+function LoginContent() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  const searchParams = useSearchParams(); // 2. Initialize searchParams
+  const searchParams = useSearchParams(); 
   const { data: session } = useSession();
 
-  // 3. Get the callbackUrl from the URL, or default to home
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
-  // Redirect if already logged in
   useEffect(() => {
     if (session) router.push(callbackUrl);
   }, [session, router, callbackUrl]);
@@ -34,11 +33,9 @@ export default function LoginPage() {
       });
 
       if (res?.error) {
-        console.error("Auth Denied:", res.error);
         setError("ACCESS_DENIED: INVALID_CIPHER_OR_IDENTITY");
         setLoading(false);
       } else {
-        // 4. Force refresh and push to the specific callbackUrl
         router.refresh();
         router.push(callbackUrl); 
       }
@@ -117,5 +114,20 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// 2. Wrap the content in Suspense for the default export
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-red-600 font-mono text-xs animate-pulse uppercase tracking-[0.5em]">
+          Establishing_Secure_Link...
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
