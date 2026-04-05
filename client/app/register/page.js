@@ -1,10 +1,11 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 
-export default function RegisterPage() {
+// 1. Move logic into a sub-component
+function RegisterContent() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,8 +17,8 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      // ✅ FIX: Use the environment variable for the backend URL
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+      const res = await fetch(`${baseUrl}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -26,10 +27,8 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (res.ok) {
-        // Redirect to login after successful account creation
         router.push('/login');
       } else {
-        // Show the specific error message from your Backend controller
         setError(data.message || "REGISTRATION_FAILED");
         setLoading(false);
       }
@@ -42,7 +41,6 @@ export default function RegisterPage() {
   return (
     <main className="min-h-screen bg-black flex items-center justify-center px-6">
       <div className="w-full max-w-md">
-        {/* Header Branding */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter">
             New <span className="text-red-600">Recruit</span>
@@ -55,7 +53,7 @@ export default function RegisterPage() {
         <div className="bg-zinc-900/30 border border-zinc-800 p-8 shadow-2xl relative">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-red-600/10 border border-red-600 p-3 text-[10px] text-red-600 font-black uppercase text-center">
+              <div className="bg-red-600/10 border border-red-600 p-3 text-[10px] text-red-600 font-black uppercase text-center animate-pulse">
                 {error}
               </div>
             )}
@@ -98,13 +96,11 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative my-8 text-center">
             <hr className="border-zinc-800" />
             <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-950 px-4 text-[8px] text-zinc-600 font-black uppercase">OR</span>
           </div>
 
-          {/* Social Auth */}
           <button 
             type="button"
             onClick={() => signIn('google', { callbackUrl: '/' })}
@@ -125,5 +121,20 @@ export default function RegisterPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+// 2. Wrap in Suspense for Export
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-red-600 font-mono text-xs animate-pulse uppercase tracking-[0.5em]">
+          Initializing_Enrollment_Protocol...
+        </div>
+      </div>
+    }>
+      <RegisterContent />
+    </Suspense>
   );
 }
